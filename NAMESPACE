@@ -2,6 +2,9 @@
 
 S3method(print,dealr)
 S3method(print,dealr_pe)
+export(dealr)
+export(lookback_input)
+export(pathwayEnrich)
 export(plotReceiverLR)
 export(plotReceiverPE)
 export(plotSenderLR)

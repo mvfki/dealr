@@ -1,4 +1,5 @@
 #' Differential Expression Aware Ligand-Receptor inference
+#' @export
 #' @description
 #' `r lifecycle::badge("experimental")`
 #'
@@ -257,6 +258,7 @@ stouffer_z <- function(z) {
 }
 
 #' Calculate pathway enrichment from DEALR result
+#' @export
 #' @description
 #' Downstream of the DEALR analysis, this function further summarizes if any
 #' pathway is significantly enriched between the sender and receiver. It
@@ -367,6 +369,7 @@ print.dealr_pe <- function(x, trunc = 10, ...) {
 #' `'receptor.symbol'`, respectively.
 #' @param symbol_splitBy The separator applied to process the ligand and
 #' receptor symbols. Default `', '`.
+#' @export
 #' @return No return value. Print information to the console.
 lookback_input <- function(
         degList,
