@@ -1,0 +1,28 @@
+Package: dealr
+Type: Package
+Title: Differentially Expression Aware Ligand-Receptor Inference
+Description: More about what it does (maybe more than one line).
+Version: 0.0.1
+Date: 2025-05-07
+Authors@R: c(
+    person("Yichen", "Wang", , "wayichen@umich.edu", role = c("aut", "cre")),
+    person("Joshua", "Welch", , "welchjd@umich.edu", role = "cph")
+  )
+License: GPL (>= 3)
+Depends: 
+    R (>= 4.0)
+Imports: 
+    cli,
+    dplyr,
+    ggplot2,
+    lifecycle,
+    rlang,
+    stats,
+    tidyr
+Suggests:
+    DESeq2
+BiocViews: 
+RoxygenNote: 7.3.2
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+LazyData: true
