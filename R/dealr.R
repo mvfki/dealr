@@ -215,6 +215,11 @@ dealr <- function(
             'n',
             drop = TRUE
         ]
+    combined_z_df <- combined_z_df %>%
+        mutate(
+            sender = factor(as.character(.data[['sender']]), levels = clusters),
+            receiver = factor(as.character(.data[['receiver']]), levels = clusters)
+        )
     class(combined_z_df) <- c('dealr', class(combined_z_df))
     return(combined_z_df)
 }
@@ -228,9 +233,9 @@ dealr <- function(
 #' @method print dealr
 print.dealr <- function(x, trunc = 10, ...) {
     cat("DEALR result\n")
-    unique_groups <- unique(c(x$sender, x$receiver))
+    unique_groups <- levels(x$sender)
     cat("Groups (")
-    cat(length(unique(c(x$sender, x$receiver))))
+    cat(length(unique_groups))
     cat("):", ansi_collapse(unique_groups, trunc = trunc, style = 'both'), '\n')
     unique_LR_pairs <- unique(x$LR_pair)
     cat("LR-pairs (")

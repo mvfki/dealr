@@ -41,27 +41,64 @@ frames before passing to the analysis.
 
 ### 2. Run DEALR inference
 
+1. Load the package
+
 ```r
-# Load the package
 library(dealr)
-# Load convenient database
+```
+
+2. Load the ligand-receptor database
+
+```r
 data(db)
-# Run LR-pair level inference
+```
+
+3. Run LR-pair level inference
+
+```r
 dealr_result <- dealr(degList, db$mouse)
-# Proceed to pathway level inference
+```
+
+4. Proceed to pathway level inference
+
+```r
 dealr_pe_result <- pathwayEnrich(dealr_result)
 ```
 
 ### 3. Visualize the result
 
-```r
-# Show differential signaling LR-pairs sent from a certain cell type (received by all possible cell types)
-plotSenderLR(dealr_result, 'Mac')
-# Show differential signaling LR-pairs received by a certain cell type (sent from all possible cell types)
-plotReceiverLR(dealr_result, 'Mac')
+Show differential signaling LR-pairs sent from a certain cell type, received by all possible cell types
 
-# Show the enriched differential signaling pathways sent from a certain cell type (received by all possible cell types)
-plotSenderPE(dealr_pe_result, 'Mac')
-# Show the enriched differential signaling pathways received by a certain cell type (sent from all possible cell types)
-plotReceiverPE(dealr_pe_result, 'Mac')
+```r
+plotLRPairDot(lr, sender_use = 'Mac')
+```
+
+Show differential signaling LR-pairs received by a certain cell type, sent from all possible cell types
+
+```r
+plotLRPairDot(lr, receiver_use = 'Mac')
+```
+
+Show all differential signaling communication involving a cell type of interests
+
+```r
+plotLRPairDot(lr, focus = 'Mac')
+```
+
+Show the enriched differential signaling pathways sent from a certain cell type, received by all possible cell types
+
+```r
+plotPathwayEnrichDot(dealr_pe_result, sender_use = 'Mac')
+```
+
+Show the enriched differential signaling pathways sent from all possible cell types, received by a certain cell type
+
+```r
+plotPathwayEnrichDot(dealr_pe_result, receiver_use = 'Mac')
+```
+
+Show all enriched differential signaling pathways involving a cell type of interests
+
+```r
+plotPathwayEnrichDot(dealr_pe_result, focus = 'Mac')
 ```
