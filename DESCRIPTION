@@ -3,7 +3,7 @@ Type: Package
 Title: Differentially Expression Aware Ligand-Receptor Inference
 Description: More about what it does (maybe more than one line).
 Version: 0.0.1
-Date: 2025-05-07
+Date: 2025-05-19
 Authors@R: c(
     person("Yichen", "Wang", , "wayichen@umich.edu", role = c("aut", "cre")),
     person("Joshua", "Welch", , "welchjd@umich.edu", role = "cph")

@@ -14,8 +14,7 @@
   upreg_col,
   fill_title,
   size_title,
-  dot_size_range,
-  x_position
+  dot_size_range
 )
 }
 \arguments{
@@ -38,9 +37,6 @@ legend.}
 \item{dot_size_range}{a numeric vector of length 2 indicating the range of
 dot sizes. The first value is the minimum size, and the second value is the
 maximum size. Default is \code{c(0.3, 4)}.}
-
-\item{x_position}{a character string indicating the position of the x-axis.
-When \code{'top'}, \code{hjust} is set to 0. When \code{'bottom'}, \code{hjust} is set to 1.}
 }
 \value{
 ggplot object to be further customized.

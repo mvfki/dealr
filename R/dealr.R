@@ -86,6 +86,9 @@
 #' \item{`pathway_size` - Number of LR-pairs in the pathway, summarized
 #' from `db` but not yielded from the analysis}
 #' }
+#' @examples
+#' db_mini <- db$mouse[db$mouse$pathway_name %in% c('IL16', 'TNF'),]
+#' lr <- dealr(deg_mini, db_mini)
 dealr <- function(
         degList,
         db,
@@ -231,6 +234,10 @@ dealr <- function(
 #' @return NULL
 #' @export
 #' @method print dealr
+#' @examples
+#' db_mini <- db$mouse[db$mouse$pathway_name %in% c('IL16', 'TNF'),]
+#' lr <- dealr(deg_mini, db_mini)
+#' print(lr)
 print.dealr <- function(x, trunc = 10, ...) {
     cat("DEALR result\n")
     unique_groups <- levels(x$sender)
@@ -268,10 +275,10 @@ stouffer_z <- function(z) {
 #' Downstream of the DEALR analysis, this function further summarizes if any
 #' pathway is significantly enriched between the sender and receiver. It
 #' combines the z-scores of the LR-pairs in the same pathway to get the z-score
-#' of the pathway. It also calculates the fold enrichment of the pathway between
-#' each pair of sender and receiver with
+#' of the pathway. It also calculates the enrichment score of the pathway
+#' between each pair of sender and receiver with
 #' \deqn{\frac{(n\>significant\>LRpairs\>in\>pathway)/(size\>of\>pathway)}
-#' {(n\>significant\>LRpairs)/(size\>of\>database)}}
+#' {(n\>significant\>LRpairs)/(size\>of\>database)}\times{\sqrt{size\>of\>pathway}}}
 #' @param dealr A `dealr` object. DO NOT FILTER.
 #' @param p_thresh Numeric threshold on individual inference to determine if
 #' the LR-pair is significant between the sender and receiver. Default
@@ -285,15 +292,19 @@ stouffer_z <- function(z) {
 #' \item{`pathway` - Pathway name}
 #' \item{`stat` - Combined z-score of the pathway between the sender and
 #' receiver}
-#' \item{`signif_n_in_pathway` - Number of significant LR-pairs in the
+#' \item{`overlap` - Number of significant LR-pairs in the
 #' pathway, between the sender and receiver}
 #' \item{`signif_n_intr` - Number of significant LR-pairs between the
 #' sender and receiver}
 #' \item{`pathway_size` - Number of LR-pairs in the pathway, summarized
 #' from `db` but not yielded from the analysis}
 #' \item{`p` - P-value of the combined z-score}
-#' \item{`fold_enrichment` - Fold enrichment of the pathway}
+#' \item{`enrichment` - Enrichment score of the pathway}
 #' }
+#' @examples
+#' db_mini <- db$mouse[db$mouse$pathway_name %in% c('IL16', 'TNF'),]
+#' lr <- dealr(deg_mini, db_mini)
+#' pe <- pathwayEnrich(lr)
 pathwayEnrich <- function(
         dealr,
         p_thresh = 0.01
@@ -313,14 +324,14 @@ pathwayEnrich <- function(
             stat = stouffer_z(.data[['stat']]),
             # Have to get these at summarizing, individual LR-pair level information
             # is lost after this pipe
-            signif_n_in_pathway = sum(.data[['p']] < p_thresh),
+            overlap = sum(.data[['p']] < p_thresh),
             # Keep pathway level information
             signif_n_intr = unique(.data[['signif_n_intr']]),
             pathway_size = unique(.data[['pathway_size']])
         ) %>%
         mutate(
             p = 2 * pnorm(abs(.data[['stat']]), lower.tail = FALSE),
-            fold_enrichment = (.data[['signif_n_in_pathway']] / .data[['pathway_size']]) /
+            enrichment = (.data[['overlap']] / sqrt(.data[['pathway_size']])) /
                 (.data[['signif_n_intr']] / length(unique(dealr$LR_pair)))
         )
     class(dealr_pe) <- c('dealr_pe', class(dealr_pe))
@@ -334,6 +345,11 @@ pathwayEnrich <- function(
 #' @return NULL
 #' @export
 #' @method print dealr_pe
+#' @examples
+#' db_mini <- db$mouse[db$mouse$pathway_name %in% c('IL16', 'TNF'),]
+#' lr <- dealr(deg_mini, db_mini)
+#' pe <- pathwayEnrich(lr)
+#' print(pe)
 print.dealr_pe <- function(x, trunc = 10, ...) {
     cat("DEALR Pathway Enrichment result\n")
     unique_groups <- unique(c(x$sender, x$receiver))
@@ -376,6 +392,8 @@ print.dealr_pe <- function(x, trunc = 10, ...) {
 #' receptor symbols. Default `', '`.
 #' @export
 #' @return No return value. Print information to the console.
+#' @examples
+#' lookback_input(deg_mini, db$mouse, 'IL16', 'CD4_T', 'CD8_T')
 lookback_input <- function(
         degList,
         db,

@@ -16,3 +16,9 @@
 \description{
 Show collapsed information of DEALR Pathway Enrichment result
 }
+\examples{
+db_mini <- db$mouse[db$mouse$pathway_name \%in\% c('IL16', 'TNF'),]
+lr <- dealr(deg_mini, db_mini)
+pe <- pathwayEnrich(lr)
+print(pe)
+}

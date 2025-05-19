@@ -47,17 +47,33 @@ frames before passing to the analysis.
 library(dealr)
 ```
 
-2. Load the ligand-receptor database
+2. Load the ligand-receptor database. 
 
 ```r
 data(db)
 ```
+
+The object `db` is a list object with two elements `db$mouse` and `db$human`.
+They are identical to `CellChat::CellChatDB.mouse$interaction` and 
+`CellChat::CellChatDB.human$interaction`, respectively (copied from v2.2.0).
 
 3. Run LR-pair level inference
 
 ```r
 dealr_result <- dealr(degList, db$mouse)
 ```
+
+`degList` is currently expected to be a named list of data.frame objects, each
+returned by a DESeq2 run. See previous section for detail. 
+
+Parameter `baseMeanThresh` can be adjusted to filter out lowly expressed genes
+to deny that they are expressed enough for forming LR interaction. This is 
+currently based on the `baseMean` field of DESeq2 result, which is the average 
+of the normalized counts across all samples. In our case, the average of the
+DESeq2-normalized pseudo-bulk counts from all samples involved in a test.
+
+>This might be improved in the future introducing expression percentage obtained
+from single-cell data instead of just pseudo-bulk data.
 
 4. Proceed to pathway level inference
 
@@ -67,38 +83,67 @@ dealr_pe_result <- pathwayEnrich(dealr_result)
 
 ### 3. Visualize the result
 
-Show differential signaling LR-pairs sent from a certain cell type, received by all possible cell types
+- `plotLRPairDot(dealr_result)`: Dot plot of LR-pair significance between 
+possible sender-receiver pair. Larger dot size indicates more significant 
+LR-pair. Red color (default for `upreg_col`) indicates up-regulated LR-pair 
+signaling and blue color (default for `downreg_col`) indicates down-regulated
+LR-pair signaling. The color intensity indicates the significance level as well.
+Note that there is no difference between the significance level represented by
+size and color. Suggestions for more metrics to be shown are very welcomed.
+- `plotPathwayEnrichDot(dealr_pe_result)`: Dot plot of pathway significance 
+between possible sender-receiver pair. Larger dot size indicates more LR-pairs
+are significant within the pathway, while metric for this can vary. Use 
+`size_by = 'overlap'` (default) for exact number of LR-pairs or `'enrichment'` 
+for using a relative enrichment ratio. Red color (default for `upreg_col`) 
+indicates up-regulated pathway signaling and blue color (default for
+`downreg_col`) indicates down-regulated pathway signaling. Darker color 
+indicates more significant pathways. 
+
+The interpretaion of the result is quite complex, given the network between 
+three levels of information: senders, receivers and LR-pairs/pathways. The 
+functions above visualize all significant inference though, we have the 
+filtering logic to filter the senders and receivers to allow focused
+panels for specific identities. 
+
+- `sender_use`: Include sender-receiver pairs with the sender(s) of interest. 
+One or more.
+- `receiver_use`: Include sender-receiver pairs with the receiver(s) of 
+interest. One or more.
+- `focus`: Include sender-receiver pairs with having this identity as either 
+the sender or the receiver. Only one allowed.
+
+For example, when having cell type A, B and C in the analysis, a parameter set
+of `sender_use = c('A', 'B'), receiver_use = c('A', 'B'), focus = 'A'` will
+show you the significan LR-pairs/pathways in A->A, A->B and B->A. B->B, A->/<-C
+and B->/<-C will be filtered out.
+
+More examples are shown below.
+
+Show differential signaling LR-pairs sent from a certain cell type, received by 
+all possible cell types
 
 ```r
-plotLRPairDot(lr, sender_use = 'Mac')
-```
-
-Show differential signaling LR-pairs received by a certain cell type, sent from all possible cell types
-
-```r
-plotLRPairDot(lr, receiver_use = 'Mac')
+plotLRPairDot(dealr_result, sender_use = 'Mac')
 ```
 
 Show all differential signaling communication involving a cell type of interests
 
 ```r
-plotLRPairDot(lr, focus = 'Mac')
+plotLRPairDot(dealr_result, focus = 'Mac')
 ```
 
-Show the enriched differential signaling pathways sent from a certain cell type, received by all possible cell types
-
-```r
-plotPathwayEnrichDot(dealr_pe_result, sender_use = 'Mac')
-```
-
-Show the enriched differential signaling pathways sent from all possible cell types, received by a certain cell type
+Show the enriched differential signaling pathways sent from all possible cell 
+types, received by a certain cell type
 
 ```r
 plotPathwayEnrichDot(dealr_pe_result, receiver_use = 'Mac')
 ```
 
-Show all enriched differential signaling pathways involving a cell type of interests
+Show all enriched differential signaling pathways involving a cell type of 
+interests, but only between this cell type and other immune cells.
 
 ```r
-plotPathwayEnrichDot(dealr_pe_result, focus = 'Mac')
+immunes <- c('Mono', 'Mac', 'DC', 'B', 'T4', 'T8', 'NK') # ... as many as you have
+plotPathwayEnrichDot(dealr_pe_result, focus = 'Mac', sender_use = immunes, 
+                     receiver_use = immunes)
 ```

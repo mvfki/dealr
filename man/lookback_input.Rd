@@ -53,3 +53,6 @@ expression is stable. 2. If \code{padj} is NA, it means DESeq2 already
 ignored it due to too-low expression. 3. Then see \code{stat} for verifying
 if the calculation is correct.
 }
+\examples{
+lookback_input(deg_mini, db$mouse, 'IL16', 'CD4_T', 'CD8_T')
+}

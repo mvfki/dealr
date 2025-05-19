@@ -10,6 +10,8 @@ plotPathwayEnrichDot(
   receiver_use = NULL,
   focus = NULL,
   p_thresh = 0.01,
+  size_by = c("overlap", "enrichment"),
+  fe_thresh = 2,
   top_n = NULL,
   downreg_col = "#2166AC",
   upreg_col = "#B2182B",
@@ -40,6 +42,14 @@ pairs of sender and receiver as provided with \code{sender_use} and
 
 \item{p_thresh}{a numeric value indicating the p-value threshold for
 filtering the pathways. Default \code{0.01}.}
+
+\item{size_by}{Choose from \code{'overlap'} or \code{'enrichment'}. If \code{overlap}, dots
+are sized by the number of significant LR-pairs annotated as in the pathway.
+If \code{enrichment}, dots are sized by the log of the fold enrichment score.
+Default \code{overlap}.}
+
+\item{fe_thresh}{a numeric value indicating the fold enrichment threshold
+for filtering the pathways. Default \code{2}.}
 
 \item{top_n}{a numeric value indicating the number of top pathways to be
 plotted, ranked by p-value. Default \code{NULL} means all pathways, usually
@@ -73,4 +83,10 @@ ggplot object of the dot plot.
 \description{
 The size of dots shows the fold enrichment of the pathways, and the color
 indicates the significance and direction of the regulation of the pathways.
+}
+\examples{
+db_mini <- db$mouse[db$mouse$pathway_name \%in\% c('IL16', 'TNF'),]
+lr <- dealr(deg_mini, db_mini)
+pe <- pathwayEnrich(lr)
+plotPathwayEnrichDot(pe)
 }

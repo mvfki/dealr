@@ -116,3 +116,7 @@ names are for the cell types. \strong{Do NOT FILTER} the DESeq2 result data fram
 before passing to this function.
 }
 
+\examples{
+db_mini <- db$mouse[db$mouse$pathway_name \%in\% c('IL16', 'TNF'),]
+lr <- dealr(deg_mini, db_mini)
+}

@@ -25,6 +25,10 @@
 #' @inheritParams .theme_text_setter
 #' @return ggplot object of the dot plot.
 #' @export
+#' @examples
+#' db_mini <- db$mouse[db$mouse$pathway_name %in% c('IL16', 'TNF'),]
+#' lr <- dealr(deg_mini, db_mini)
+#' plotLRPairDot(lr)
 plotLRPairDot <- function(
         dealr,
         sender_use = NULL,
@@ -81,8 +85,7 @@ plotLRPairDot <- function(
     if (!is.null(top_n)) {
         dealr <- dealr %>%
             ungroup() %>%
-            arrange(.data[['p']]) %>%
-            slice_head(n = top_n)
+            .search_top_n_matrow(col_look = 'LR_pair', n = top_n)
     }
     if (nrow(dealr) == 0) {
         cli_abort('No significant LR-pairs found for the sender {sender_use}.')
@@ -97,19 +100,12 @@ plotLRPairDot <- function(
             upreg_col = upreg_col,
             fill_title = 'Z-score',
             size_title = '-log10(p-value)',
-            dot_size_range = dot_size_range,
-            x_position = 'bottom'
+            dot_size_range = dot_size_range
         ) +
         facet_grid(
             cols = (if ('role' %in% colnames(dealr)) vars(dealr$role) else NULL),
             rows = vars(dealr$pathway),
             scales = 'free', space = 'free_y'
-        ) +
-        theme(
-            panel.spacing.y = unit(0, "lines"),
-            strip.text.y.right = element_text(angle = 0, color = 'black'),
-            strip.text.x.top = element_text(angle = 0, color = 'black'),
-            strip.background = element_rect(fill = 'grey90', color = 'black', linewidth = 0.5),
         ) +
         .theme_text_setter(
             text_x_size = text_x_size,
@@ -138,6 +134,12 @@ plotLRPairDot <- function(
 #' `receiver_use`.
 #' @param p_thresh a numeric value indicating the p-value threshold for
 #' filtering the pathways. Default `0.01`.
+#' @param size_by Choose from `'overlap'` or `'enrichment'`. If `overlap`, dots
+#' are sized by the number of significant LR-pairs annotated as in the pathway.
+#' If `enrichment`, dots are sized by the log of the fold enrichment score.
+#' Default `overlap`.
+#' @param fe_thresh a numeric value indicating the fold enrichment threshold
+#' for filtering the pathways. Default `2`.
 #' @param top_n a numeric value indicating the number of top pathways to be
 #' plotted, ranked by p-value. Default `NULL` means all pathways, usually
 #' not too many.
@@ -146,12 +148,19 @@ plotLRPairDot <- function(
 #' @return ggplot object of the dot plot.
 #' @rdname plotDealrPE
 #' @export
+#' @examples
+#' db_mini <- db$mouse[db$mouse$pathway_name %in% c('IL16', 'TNF'),]
+#' lr <- dealr(deg_mini, db_mini)
+#' pe <- pathwayEnrich(lr)
+#' plotPathwayEnrichDot(pe)
 plotPathwayEnrichDot <- function(
         dealr_pe,
         sender_use = NULL,
         receiver_use = NULL,
         focus = NULL,
         p_thresh = 0.01,
+        size_by = c('overlap', 'enrichment'),
+        fe_thresh = 2,
         top_n = NULL,
         downreg_col = '#2166AC',
         upreg_col = '#B2182B',
@@ -170,7 +179,10 @@ plotPathwayEnrichDot <- function(
     sender_use <- arg_match(sender_use, levels(dealr_pe$sender), multiple = TRUE)
     receiver_use <- receiver_use %||% levels(dealr_pe$receiver)
     receiver_use <- arg_match(receiver_use, levels(dealr_pe$receiver), multiple = TRUE)
+    size_by <- arg_match(size_by, c('overlap', 'enrichment'))
 
+    if (size_by == 'enrichment')
+        dealr_pe <- dealr_pe %>% filter(.data[['enrichment']] > fe_thresh)
     dealr_pe <- dealr_pe %>% filter(
         .data[['sender']] %in% sender_use,
         .data[['receiver']] %in% receiver_use,
@@ -194,8 +206,7 @@ plotPathwayEnrichDot <- function(
     if (!is.null(top_n)) {
         dealr_pe <- dealr_pe %>%
             ungroup() %>%
-            arrange(.data[['p']]) %>%
-            slice_head(n = top_n)
+            .search_top_n_matrow(col_look = 'pathway', n = top_n)
     }
     if (nrow(dealr_pe) == 0) {
         cli_abort('No significant LR-pairs found for the sender {sender_use}.')
@@ -205,22 +216,20 @@ plotPathwayEnrichDot <- function(
         .dotplot(
             x = dealr_pe$pair,
             y = dealr_pe$pathway,
-            size = log(dealr_pe$fold_enrichment),
+            size = switch(size_by,
+                          overlap = dealr_pe$overlap,
+                          enrichment = log(dealr_pe$enrichment)),
             fill = -log10(dealr_pe$p)*sign(dealr_pe$stat),
             downreg_col = downreg_col,
             upreg_col = upreg_col,
             fill_title = '-log10(p) x direction',
-            size_title = 'log(Fold Enrichment)',
-            dot_size_range = dot_size_range,
-            x_position = 'bottom'
+            size_title = switch(size_by,
+                                overlap = 'Overlap',
+                                enrichment = 'log(Enrichment)'),
+            dot_size_range = dot_size_range
         ) +
         (
             if (!is.null(focus)) facet_grid(cols = vars(dealr_pe$role), space = 'free_x', scales = 'free_x')  else NULL
-        ) +
-        theme(
-            panel.spacing.x = unit(0, "lines"),
-            strip.text.x.top = element_text(angle = 0, color = 'black'),
-            strip.background = element_rect(fill = 'grey90', color = 'black', linewidth = 0.5),
         ) +
         .theme_text_setter(
             text_x_size = text_x_size,
@@ -246,8 +255,6 @@ plotPathwayEnrichDot <- function(
 #' @param dot_size_range a numeric vector of length 2 indicating the range of
 #' dot sizes. The first value is the minimum size, and the second value is the
 #' maximum size. Default is `c(0.3, 4)`.
-#' @param x_position a character string indicating the position of the x-axis.
-#' When `'top'`, `hjust` is set to 0. When `'bottom'`, `hjust` is set to 1.
 #' @return ggplot object to be further customized.
 .dotplot <- function(
         plotDF,
@@ -259,8 +266,7 @@ plotPathwayEnrichDot <- function(
         upreg_col,
         fill_title,
         size_title,
-        dot_size_range,
-        x_position
+        dot_size_range
 ) {
     plotDF %>%
         ggplot(aes(
@@ -282,18 +288,18 @@ plotPathwayEnrichDot <- function(
             fill = guide_colorbar(title = fill_title),
             size = guide_legend(title = size_title)
         ) +
-        scale_x_discrete(position = x_position) +
         theme(
-            axis.text.x = element_text(
-                angle = 45,
-                hjust = switch(x_position, top = 0, bottom = 1),
-            ),
+            axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
             axis.title.x = element_blank(),
             legend.title.position = 'left',
             legend.title = element_text(angle = 270),
             axis.title.y = element_blank(),
             plot.title = element_text(hjust = 0.5),
-            panel.grid = element_blank()
+            panel.spacing.y = unit(0, "lines"),
+            panel.spacing.x = unit(0, "lines"),
+            strip.text.y.right = element_text(angle = 0, color = 'black'),
+            strip.text.x.top = element_text(angle = 0, color = 'black'),
+            strip.background = element_rect(fill = 'grey90', color = 'black', linewidth = 0.5)
         )
 }
 
@@ -320,4 +326,26 @@ plotPathwayEnrichDot <- function(
         legend.text = element_text(size = text_legend_size),
         legend.title = element_text(size = text_legend_title_size)
     )
+}
+
+# Search for top N rows in the dot plot, not the top N rows in the result table.
+# like LR-pair/pathway happens to be significant in multiple cell-type-pairs,
+# this only counts once.
+# x - pre-filtered result table
+# col_look - column name containing the LR-pair/pathway names to count for
+# unique items
+.search_top_n_matrow <- function(x, col_look, n) {
+    x <- x %>% arrange(.data[['p']])
+    seen <- list()
+    i = 1
+    while (length(seen) <= n) {
+        if (i > nrow(x)) break
+
+        item <- x[[col_look]][i]
+        if (!item %in% names(seen)) seen[[item]] <- 1
+        else seen[[item]] <- seen[[item]] + 1
+        i <- i + 1
+    }
+    if (length(seen) > n) seen[[item]] <- NULL
+    x %>% filter(.data[[col_look]] %in% names(seen))
 }

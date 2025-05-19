@@ -79,3 +79,8 @@ ggplot object of the dot plot.
 The size of dots reflects significance of the LR-pairs, and the color
 indicates the direction of the interaction.
 }
+\examples{
+db_mini <- db$mouse[db$mouse$pathway_name \%in\% c('IL16', 'TNF'),]
+lr <- dealr(deg_mini, db_mini)
+plotLRPairDot(lr)
+}

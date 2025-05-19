@@ -22,22 +22,27 @@ A \code{dealr_pe} object, inherited from \code{tbl_df}, \code{dbl} and
 \item{\code{pathway} - Pathway name}
 \item{\code{stat} - Combined z-score of the pathway between the sender and
 receiver}
-\item{\code{signif_n_in_pathway} - Number of significant LR-pairs in the
+\item{\code{overlap} - Number of significant LR-pairs in the
 pathway, between the sender and receiver}
 \item{\code{signif_n_intr} - Number of significant LR-pairs between the
 sender and receiver}
 \item{\code{pathway_size} - Number of LR-pairs in the pathway, summarized
 from \code{db} but not yielded from the analysis}
 \item{\code{p} - P-value of the combined z-score}
-\item{\code{fold_enrichment} - Fold enrichment of the pathway}
+\item{\code{enrichment} - Enrichment score of the pathway}
 }
 }
 \description{
 Downstream of the DEALR analysis, this function further summarizes if any
 pathway is significantly enriched between the sender and receiver. It
 combines the z-scores of the LR-pairs in the same pathway to get the z-score
-of the pathway. It also calculates the fold enrichment of the pathway between
-each pair of sender and receiver with
+of the pathway. It also calculates the enrichment score of the pathway
+between each pair of sender and receiver with
 \deqn{\frac{(n\>significant\>LRpairs\>in\>pathway)/(size\>of\>pathway)}
-{(n\>significant\>LRpairs)/(size\>of\>database)}}
+{(n\>significant\>LRpairs)/(size\>of\>database)}\times{\sqrt{size\>of\>pathway}}}
+}
+\examples{
+db_mini <- db$mouse[db$mouse$pathway_name \%in\% c('IL16', 'TNF'),]
+lr <- dealr(deg_mini, db_mini)
+pe <- pathwayEnrich(lr)
 }
