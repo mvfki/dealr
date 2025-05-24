@@ -39,6 +39,29 @@ This function expect a named list object that gathers all these data frames.
 List names are for the cell types. **DO NOT FILTER** the DESeq2 result data 
 frames before passing to the analysis.
 
+We have implemented a DE test function solely for this purpose. it works for
+either a plain matrix or list of matrices bundled with metadata variables, or
+commonly seen container objects like `Seurat` and `liger`.
+
+For A Seurat or liger object:
+
+```r
+degList <- pseudobulkDE(
+    data = seurat_or_liger_Obj,
+    condVar = 'treatment', condTest = 'treated', condCtrl = 'control', 
+    splitVar = 'cell_type', 
+    replicateVar = 'sample'
+)
+```
+
+`condVar`, `splitVar` and `replicateVar` must be available in the metadata slot.
+`splitVar` and `replicateVar` will be set to conventional variables if left as
+default. That is `Idents(seuratObj)` and `seuratObj$orig.ident` for Seurat, and,
+`defaultCluster(ligerObj)` and `ligerObj$dataset` for liger, respectively.
+
+Please see function manual for more details when using matrix or list of 
+matrices pulled out from other forms of data structure.
+
 ### 2. Run DEALR inference
 
 1. Load the package

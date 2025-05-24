@@ -93,7 +93,9 @@ dealr <- function(
         degList,
         db,
         baseMeanThresh = 100,
+        abslogfcThresh = 1,
         baseMean_field = 'baseMean',
+        logfc_field = 'log2FoldChange',
         stat_field = 'stat',
         padj_field = 'padj',
         pathway_name_field = 'pathway_name',
@@ -110,8 +112,12 @@ dealr <- function(
         tryCatch(
             {
                 arg_match(baseMean_field, values = colnames(degList[[i]]))
+                arg_match(logfc_field, values = colnames(degList[[i]]))
                 arg_match(stat_field, values = colnames(degList[[i]]))
                 arg_match(padj_field, values = colnames(degList[[i]]))
+                # DESeq2 original S4Vectod::DataFrame output is 3x slower in
+                # subsetting tasks below
+                degList[[i]] <- as.data.frame(degList[[i]])
             },
             error = function(e) {
                 msg <- e$message
@@ -135,6 +141,11 @@ dealr <- function(
         dim = c(length(clusters), length(clusters), nrow(db)),
         dimnames = list(clusters, clusters, rownames(db))
     )
+    combined_logfc <- array(
+        data = 0,
+        dim = c(length(clusters), length(clusters), nrow(db)),
+        dimnames = list(clusters, clusters, rownames(db))
+    )
 
     # Go through each LR-pair, then each sender cluster for ligand(s), and then
     # each receiver cluster for receptor(s).
@@ -154,9 +165,14 @@ dealr <- function(
         )[[1]]
         for (j in seq_along(clusters)) {
             cluster_lig <- clusters[j]
+            if (!all(ligands %in% rownames(degList[[cluster_lig]]))) {
+                for (k in seq_along(clusters)) cli_progress_update()
+                next
+            }
             z_ligands <- degList[[cluster_lig]][ligands, stat_field]
             padj_ligands <- degList[[cluster_lig]][ligands, padj_field]
             baseMean_ligands <- degList[[cluster_lig]][ligands, baseMean_field]
+            logfc_ligands <- degList[[cluster_lig]][ligands, logfc_field]
             if (any(is.na(padj_ligands)) ||
                 any(baseMean_ligands < baseMeanThresh)) {
                 for (k in seq_along(clusters)) cli_progress_update()
@@ -164,15 +180,25 @@ dealr <- function(
             }
             for (k in seq_along(clusters)) {
                 cluster_rec = clusters[k]
+                if (!all(receptors %in% rownames(degList[[cluster_rec]]))) {
+                    cli_progress_update()
+                    next
+                }
                 z_receptors <- degList[[cluster_rec]][receptors, stat_field]
                 padj_receptors <- degList[[cluster_rec]][receptors, padj_field]
                 baseMean_receptors <- degList[[cluster_rec]][receptors, baseMean_field]
+                logfc_receptors <- degList[[cluster_rec]][receptors, logfc_field]
                 if (any(is.na(padj_receptors)) ||
                     any(baseMean_receptors < baseMeanThresh)) {
                     cli_progress_update()
                     next
                 }
+                if (!any(abs(c(logfc_ligands, logfc_receptors)) > abslogfcThresh)) {
+                    cli_progress_update()
+                    next
+                }
                 combined_z[j, k, i] <- stouffer_z(c(z_ligands, z_receptors))
+                combined_logfc[j, k, i] <- sum(c(mean(logfc_ligands), mean(logfc_receptors)))
                 cli_progress_update()
             }
         }
@@ -181,50 +207,55 @@ dealr <- function(
     # Pivot the 3d-array longer so each row of the data.frame represents one
     # original entry.
     # Calculate the p-value from the combined z-score at the same time.
-    cli_progress_bar(
-        name = 'Post-processing for full info',
-        type = 'iterator',
-        total = dim(combined_z)[3]
-    )
-    layerList <- list()
-    for (k in seq_len(dim(combined_z)[3])) {
-        combined_z[, , k] %>%
-            as.data.frame() %>%
-            mutate(sender = dimnames(combined_z)[[1]]) %>%
-            pivot_longer(
-                cols = -c(.data[['sender']]),
-                names_to = 'receiver',
-                values_to = 'stat'
-            ) -> layerList[[k]]
-        cli_progress_update()
-    }
-    names(layerList) <- dimnames(combined_z)[[3]]
-    combined_z_df <-
-        bind_rows(layerList, .id = 'LR_pair') %>%
+    combined_z_df <- .pivot_3Darray_longer(combined_z,
+        values_to = 'stat',
+        names_to = c('sender', 'receiver', 'LR_pair')
+    ) %>%
         mutate(
-            LR_pair = as.character(.data[['LR_pair']]),
-            p = 2*pnorm(abs(.data[['stat']]), lower.tail = FALSE),
+            p = 2 * pnorm(abs(.data[['stat']]), lower.tail = FALSE),
             pathway = db[.data[['LR_pair']], pathway_name_field]
         )
+    combined_logfc_df <- .pivot_3Darray_longer(combined_logfc,
+        values_to = 'logFC',
+        names_to = c('sender', 'receiver', 'LR_pair')
+    )
+    result <- merge(
+        combined_z_df,
+        combined_logfc_df,
+        by = c('sender', 'receiver', 'LR_pair')
+    )
     pathway_size_df <- db %>%
         group_by(.data[[pathway_name_field]]) %>%
         summarise(n = n())
-    combined_z_df$pathway_size <-
-        pathway_size_df[
-            match(
-                combined_z_df$pathway,
-                pathway_size_df[[pathway_name_field]]
-            ),
-            'n',
-            drop = TRUE
-        ]
-    combined_z_df <- combined_z_df %>%
+    result$pathway_size <- pathway_size_df[
+        match(
+            result$pathway,
+            pathway_size_df[[pathway_name_field]]
+        ),
+        'n',
+        drop = TRUE
+    ]
+    result <- result %>%
         mutate(
+            ligand_symbols = db[.data[['LR_pair']], ligand_symbol_field],
+            receptor_symbols = db[.data[['LR_pair']], receptor_symbol_field],
             sender = factor(as.character(.data[['sender']]), levels = clusters),
             receiver = factor(as.character(.data[['receiver']]), levels = clusters)
+        ) %>%
+        select(
+            .data[['LR_pair']],
+            .data[['sender']],
+            .data[['receiver']],
+            .data[['logFC']],
+            .data[['stat']],
+            .data[['p']],
+            .data[['pathway']],
+            .data[['pathway_size']],
+            .data[['ligand_symbols']],
+            .data[['receptor_symbols']]
         )
-    class(combined_z_df) <- c('dealr', class(combined_z_df))
-    return(combined_z_df)
+    class(result) <- c('dealr', class(result))
+    return(result)
 }
 
 #' Show collapsed information of DEALR result
@@ -436,9 +467,9 @@ lookback_input <- function(
         unique() -> receptors
 
     cat('\nSender DE stats:\n\n')
-    print(degList[[sender_use]][ligands,])
+    print(as.data.frame(degList[[sender_use]])[ligands,])
     cat('\nReceiver DE stats:\n\n')
-    print(degList[[receiver_use]][receptors,])
+    print(as.data.frame(degList[[receiver_use]])[receptors,])
 
     return(invisible(NULL))
 }

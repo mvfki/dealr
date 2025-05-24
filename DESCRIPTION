@@ -1,9 +1,10 @@
 Package: dealr
 Type: Package
 Title: Differentially Expression Aware Ligand-Receptor Inference
-Description: More about what it does (maybe more than one line).
-Version: 0.0.1
-Date: 2025-05-19
+Description: Inference differential ligand-receptor signaling based on 
+    differential gene expression statistics.
+Version: 0.0.2
+Date: 2025-05-24
 Authors@R: c(
     person("Yichen", "Wang", , "wayichen@umich.edu", role = c("aut", "cre")),
     person("Joshua", "Welch", , "welchjd@umich.edu", role = "cph")
@@ -12,15 +13,22 @@ License: GPL (>= 3)
 Depends: 
     R (>= 4.0)
 Imports: 
+    circlize,
     cli,
+    ComplexHeatmap,
     dplyr,
     ggplot2,
     lifecycle,
+    Matrix,
+    methods,
     rlang,
+    scales,
     stats,
     tidyr
 Suggests:
-    DESeq2
+    DESeq2,
+    rliger (>= 2.0.0),
+    SeuratObject (>= 5.0.0)
 BiocViews: 
 RoxygenNote: 7.3.2
 Encoding: UTF-8
