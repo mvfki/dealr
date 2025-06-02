@@ -4,7 +4,7 @@ Title: Differentially Expression Aware Ligand-Receptor Inference
 Description: Inference differential ligand-receptor signaling based on 
     differential gene expression statistics.
 Version: 0.0.2
-Date: 2025-05-24
+Date: 2025-06-02
 Authors@R: c(
     person("Yichen", "Wang", , "wayichen@umich.edu", role = c("aut", "cre")),
     person("Joshua", "Welch", , "welchjd@umich.edu", role = "cph")
