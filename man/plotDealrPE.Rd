@@ -60,6 +60,11 @@ not too many.}
 \item{downreg_col}{a character string indicating the darkest color for
 downregulated pathways. Default is \verb{#2166AC} (blue).}
 
+\item{downreg_name, upreg_name}{Name of the conditions being used to be added
+in the legend. Set names for the control group to \code{downreg_name}, where
+negative statistics are supposed to indicate the abundance there. Similarly
+for \code{upreg_name}. Default \code{"Control"} and \code{"Test"}.}
+
 \item{upreg_col}{a character string indicating the darkest color for
 upregulated pathways. Default is \verb{#B2182B} (red).}
 

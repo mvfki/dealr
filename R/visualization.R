@@ -21,6 +21,10 @@
 #' @param top_n a numeric value indicating the number of top LR-pairs to be
 #' plotted, ranked by p-value. Default `NULL` means all LR-pairs, usually
 #' too many.
+#' @param downreg_name,upreg_name Name of the conditions being used to be added
+#' in the legend. Set names for the control group to `downreg_name`, where
+#' negative statistics are supposed to indicate the abundance there. Similarly
+#' for `upreg_name`. Default `"Control"` and `"Test"`.
 #' @inheritParams .dotplot
 #' @inheritParams .theme_text_setter
 #' @return ggplot object of the dot plot.
@@ -154,6 +158,10 @@ plotLRPairDot <- function(
 #' @param top_n a numeric value indicating the number of top pathways to be
 #' plotted, ranked by p-value. Default `NULL` means all pathways, usually
 #' not too many.
+#' @param downreg_name,upreg_name Name of the conditions being used to be added
+#' in the legend. Set names for the control group to `downreg_name`, where
+#' negative statistics are supposed to indicate the abundance there. Similarly
+#' for `upreg_name`. Default `"Control"` and `"Test"`.
 #' @inheritParams .dotplot
 #' @inheritParams .theme_text_setter
 #' @return ggplot object of the dot plot.
@@ -193,6 +201,10 @@ plotPathwayEnrichDot <- function(
     receiver_use <- receiver_use %||% levels(dealr_pe$receiver)
     receiver_use <- arg_match(receiver_use, levels(dealr_pe$receiver), multiple = TRUE)
     size_by <- arg_match(size_by, c('overlap', 'enrichment'))
+    stopifnot(length(downreg_name) <= 1)
+    stopifnot(inherits(downreg_col, 'character'))
+    stopifnot(length(upreg_name) <= 1)
+    stopifnot(inherits(upreg_col, 'character'))
 
     if (size_by == 'enrichment')
         dealr_pe <- dealr_pe %>% filter(.data[['enrichment']] > fe_thresh)
@@ -224,7 +236,9 @@ plotPathwayEnrichDot <- function(
     if (nrow(dealr_pe) == 0) {
         cli_abort('No significant LR-pairs found for the sender {sender_use}.')
     }
-
+    fill_title <- '-log10(p)*direction'
+    if (!is.null(upreg_name)) fill_title <- paste0(upreg_name, ' <- ', fill_title)
+    if (!is.null(downreg_name)) fill_title <- paste0(fill_title, ' -> ', downreg_name)
     dealr_pe %>%
         .dotplot(
             x = dealr_pe$pair,
@@ -235,7 +249,7 @@ plotPathwayEnrichDot <- function(
             fill = -log10(dealr_pe$p)*sign(dealr_pe$stat),
             downreg_col = downreg_col,
             upreg_col = upreg_col,
-            fill_title = '-log10(p) x direction',
+            fill_title = fill_title,
             size_title = switch(size_by,
                                 overlap = 'Overlap',
                                 enrichment = 'log(Enrichment)'),
@@ -343,12 +357,60 @@ plotPathwayEnrichDot <- function(
 
 #' Gene expression heatmap of differential interacting LR-pair
 #' @description
-#' It creates heatmap focusing on a specific pair of sender and receiver cell
-#' groups. The heatmap is further divided to show the contrast of between the
-#' conditions where the input DEGs were derived. The columns of the heatmap
-#' represent cells and each row is a gene. Rows are grouped by LR-pairs in the
-#' situation when complex components are involved, and are further grouped by
-#' pathways.
+#' This function creates a combined heatmap focusing on a specific pair of
+#' sender and receiver cell groups. The heatmap is divided to show the contrast
+#' between the conditions where the input DEGs were derived. The columns of the
+#' heatmap represent single cells and each row is a gene pair. In the situation
+#' of an LR-pair with complex components, e.g. A-(BC), we expand it to multiple
+#' rows of A-B and A-C to maintain the grouping. Rows are further grouped by
+#' pathways as annotated by the database used at DEALR analysis.
+#' @param data Full raw counts expression data of the single cells. Can be a
+#' single matrix or a list of matrices without merging, a commonly seen
+#' container object with raw counts at its conventional slot (e.g.
+#' LayerData(seurat, 'counts'), counts(sce), or rawData(liger)).
+#' @param dealr A `dealr` object returned from the analysis using the same
+#' `data`.
+#' @param splitVar The cell identity grouping variable used at pseudo-bulk DEG
+#' detection.
+#' @param sender_use A single group of interest to be examined as the sender,
+#' must be available in `splitVar`.
+#' @param receiver_use A single group of interest to be examined as the
+#' receiver, must be available in `splitVar`.
+#' @param condVar The condition variable used at pseudo-bulk DEG detection.
+#' @param condTest The condition used as the test condition.
+#' @param condCtrl The condition used as the control condition.
+#' @param pval_thresh Numeric, the p-value threshold. LR-pairs with p-value
+#' greater than this threshold will be ignored. Default is `0.01`.
+#' @param abslogfc_thresh Numeric, the threshold on the absolute value of
+#' combined logFC. LR-pairs with absolute value of combined logFC less than this
+#' threshold will be ignored. Default is `1`.
+#' @param top_n Integer, the number of top LR-pairs to be plotted, ranked by
+#' p-value. Default `NULL` means all LR-pairs passing the thresholds.
+#' @param pathway_use Character vector of pathways. This allows users to show
+#' only LR-pairs from specific pathways. Default `NULL` means all pathways
+#' having significant differentially interacting LR-pairs.
+#' @param splitVar_col Named character vector of colors for classes in
+#' `splitVar`. Default `NULL` uses a default color palette.
+#' @param condVar_col Named character vector of colors for conditions in
+#' `condVar`. Default `NULL` uses a default color palette.
+#' @param text_gene_size Numeric, size of the gene names at the left and right
+#' of the heatmap. Default `6`.
+#' @param text_pathway_size Numeric, size of the pathway names at the left of
+#' the heatmap. Default `8`.
+#' @param text_condition_size Numeric, size of the condition names at the top of
+#' the heatmap. Default `10`.
+#' @param text_annotation_size Numeric, size of the annotation names by the side
+#' of the annotation bars of the heatmap. Default `8`.
+#' @param text_legend_size Numeric, size of the text in the legend. Default `8`.
+#' @param text_legend_title_size Numeric, size of the legend title. Default
+#' `10`.
+#' @param left_width A unit object indicating the width of the left panel for
+#' the sender group. Default `grid::unit(4, "cm")`.
+#' @param middle_width A unit object indicating the width of the middle panel
+#' for LR-pair statistics. Default `grid::unit(1, "cm")`.
+#' @param right_width A unit object indicating the width of the right panel for
+#' the receiver group. Default `grid::unit(4, "cm")`.
+#' @param ... Method specific arguments.
 #' @export
 #' @rdname plotLRGeneHeatmap
 plotLRGeneHeatmap <- function(
@@ -562,9 +624,9 @@ plotLRGeneHeatmap.default <- function(
         ),
         name = 'Gene\nExpression',
         heatmap_legend_param = legendTitleParam('Gene\nExpression'),
-        row_labels = lr_gene_df$ligand_symbols,
-        row_names_gp = grid::gpar(fontsize = text_gene_size),
-        row_names_side = 'left',
+        border = TRUE,
+        border_gp = grid::gpar(col = 'grey30', lwd = 0.5),
+
         top_annotation = ComplexHeatmap::HeatmapAnnotation(
             df = top_ann_df_1[, -3],
             col = collist1,
@@ -580,6 +642,10 @@ plotLRGeneHeatmap.default <- function(
         column_title_rot = 30,
         column_title_gp = grid::gpar(fontsize = text_condition_size, fontface = 'bold'),
         cluster_column_slices = FALSE,
+
+        row_labels = lr_gene_df$ligand_symbols,
+        row_names_gp = grid::gpar(fontsize = text_gene_size),
+        row_names_side = 'left',
         row_split = lr_gene_df$pathway,
         row_title_rot = 0,
         row_title_gp = grid::gpar(fontsize = text_pathway_size),
@@ -605,9 +671,9 @@ plotLRGeneHeatmap.default <- function(
         # col = circlize::colorRamp2(c(-2, 0, 2), c('#2166AC', 'white', '#B2182B')),
         name = 'Gene\nExpression',
         heatmap_legend_param = legendTitleParam('Gene\nExpression'),
-        row_labels = lr_gene_df$receptor_symbols,
-        row_names_gp = grid::gpar(fontsize = text_gene_size),
-        row_names_side = 'right',
+        border = TRUE,
+        border_gp = grid::gpar(col = 'grey30', lwd = 0.5),
+
         top_annotation = ComplexHeatmap::HeatmapAnnotation(
             df = top_ann_df_2[, -3],
             col = collist2,
@@ -623,6 +689,10 @@ plotLRGeneHeatmap.default <- function(
         column_title_rot = 30,
         column_title_gp = grid::gpar(fontsize = text_condition_size, fontface = 'bold'),
         cluster_column_slices = FALSE,
+
+        row_labels = lr_gene_df$receptor_symbols,
+        row_names_gp = grid::gpar(fontsize = text_gene_size),
+        row_names_side = 'right',
         row_split = lr_gene_df$pathway,
         cluster_row_slices = FALSE,
         cluster_rows = FALSE
@@ -682,5 +752,170 @@ plotLRGeneHeatmap.default <- function(
         annotation_legend_side = 'right',
         legend_grouping = 'original',
         gap = grid::unit(c(3, 0.5, 3), 'mm')
+    )
+}
+
+#' @export
+#' @rdname plotLRGeneHeatmap
+#' @method plotLRGeneHeatmap liger
+plotLRGeneHeatmap.liger <- function(
+        data,
+        dealr,
+        splitVar,
+        sender_use,
+        receiver_use,
+        condVar,
+        condTest,
+        condCtrl,
+        pval_thresh = 0.01,
+        abslogfc_thresh = 1,
+        top_n = NULL,
+        pathway_use = NULL,
+        splitVar_col = NULL,
+        condVar_col = NULL,
+        text_gene_size = 6,
+        text_pathway_size = 8,
+        text_condition_size = 10,
+        text_annotation_size = 8,
+        text_legend_size = 8,
+        text_legend_title_size = 10,
+        left_width = grid::unit(4, "cm"),
+        middle_width = grid::unit(1, "cm"),
+        right_width = grid::unit(4, "cm"),
+        ...
+) {
+    if (!requireNamespace('rliger', quietly = TRUE) ||
+        utils::packageVersion('rliger') < package_version('2.0.0')) {
+        cli_abort(c(
+            x ='Package {.pkg rliger >= 2.0.0} is required for this function.',
+            i = 'Please install it with {.code install.packages("rliger")}.'
+        ))
+    }
+
+    if (length(condVar) == 1) {
+        condVar <- arg_match(condVar, colnames(rliger::cellMeta(data)), multiple = FALSE)
+        condVar <- rliger::cellMeta(data)[[condVar]]
+    }
+
+    splitVar <- splitVar %||% rliger::defaultCluster(data)
+    if (length(splitVar) == 1) {
+        splitVar <- arg_match(splitVar, colnames(rliger::cellMeta(data)), multiple = FALSE)
+        splitVar <- rliger::cellMeta(data)[[splitVar]]
+    }
+
+    data <- rliger::rawData(data)
+
+    plotLRGeneHeatmap.default(
+        data = data,
+        dealr = dealr,
+        splitVar = splitVar,
+        sender_use = sender_use,
+        receiver_use = receiver_use,
+        condVar = condVar,
+        condTest = condTest,
+        condCtrl = condCtrl,
+        pval_thresh = pval_thresh,
+        abslogfc_thresh = abslogfc_thresh,
+        top_n = top_n,
+        pathway_use = pathway_use,
+        splitVar_col = splitVar_col,
+        condVar_col = condVar_col,
+        text_gene_size = text_gene_size,
+        text_pathway_size = text_pathway_size,
+        text_condition_size = text_condition_size,
+        text_annotation_size = text_annotation_size,
+        text_legend_size = text_legend_size,
+        text_legend_title_size = text_legend_title_size,
+        left_width = left_width,
+        middle_width = middle_width,
+        right_width = right_width
+    )
+}
+
+#' @export
+#' @rdname plotLRGeneHeatmap
+#' @method plotLRGeneHeatmap Seurat
+#' @param assay Name of assay to fetch counts from a Seurat object. Default
+#' `"RNA"`.
+plotLRGeneHeatmap.Seurat <- function(
+        data,
+        dealr,
+        splitVar,
+        sender_use,
+        receiver_use,
+        condVar,
+        condTest,
+        condCtrl,
+        pval_thresh = 0.01,
+        abslogfc_thresh = 1,
+        top_n = NULL,
+        pathway_use = NULL,
+        splitVar_col = NULL,
+        condVar_col = NULL,
+        text_gene_size = 6,
+        text_pathway_size = 8,
+        text_condition_size = 10,
+        text_annotation_size = 8,
+        text_legend_size = 8,
+        text_legend_title_size = 10,
+        left_width = grid::unit(4, "cm"),
+        middle_width = grid::unit(1, "cm"),
+        right_width = grid::unit(4, "cm"),
+        assay = 'RNA',
+        ...
+) {
+    if (!requireNamespace('SeuratObject', quietly = TRUE) ||
+        utils::packageVersion('SeuratObject') < package_version('5.0.0')) {
+        cli_abort(c(
+            x = 'Package {.pkg SeuratObject >= 5.0.0} is required for this function.',
+            i = 'Please install it with {.code install.packages("Seurat")}'
+        ))
+    }
+
+    if (length(condVar) == 1) {
+        condVar <- arg_match(condVar, colnames(data[[]]), multiple = FALSE)
+        condVar <- data[[condVar, drop = TRUE]]
+    }
+
+    splitVar <- splitVar %||% SeuratObject::Idents(data)
+    if (length(splitVar) == 1) {
+        splitVar <- arg_match(splitVar, colnames(data[[]]), multiple = FALSE)
+        splitVar <- data[[splitVar, drop = TRUE]]
+    }
+
+    layerUse <- SeuratObject::Layers(data, search = 'counts', assay = assay)
+    if (length(layerUse) > 1) {
+        data <- lapply(layerUse, function(x) {
+            SeuratObject::LayerData(data, layer = x, assay = assay)
+        })
+        names(data) <- layerUse
+    } else {
+        data <- SeuratObject::LayerData(data, layer = layerUse, assay = assay)
+    }
+
+    plotLRGeneHeatmap.default(
+        data = data,
+        dealr = dealr,
+        splitVar = splitVar,
+        sender_use = sender_use,
+        receiver_use = receiver_use,
+        condVar = condVar,
+        condTest = condTest,
+        condCtrl = condCtrl,
+        pval_thresh = pval_thresh,
+        abslogfc_thresh = abslogfc_thresh,
+        top_n = top_n,
+        pathway_use = pathway_use,
+        splitVar_col = splitVar_col,
+        condVar_col = condVar_col,
+        text_gene_size = text_gene_size,
+        text_pathway_size = text_pathway_size,
+        text_condition_size = text_condition_size,
+        text_annotation_size = text_annotation_size,
+        text_legend_size = text_legend_size,
+        text_legend_title_size = text_legend_title_size,
+        left_width = left_width,
+        middle_width = middle_width,
+        right_width = right_width
     )
 }

@@ -4,9 +4,17 @@
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-Cell-cell interaction inference from single-cell transcriptomics data has been popular, but the comparison of the signaling between conditions has been an awkward field. 
+Cell-cell interaction inference from single-cell transcriptomics data has been 
+popular, but the comparison of the signaling between conditions has been an 
+awkward field. Current tools tend to score LR-pairs within single samples, which
+allows in-sample comparison, while it is less convincing to directly compare 
+the scores across conditions consisting of multiple samples.
 
-Basically, we aim to derive the statistics based on DE tests so it provides evident inference. Please see function manuals for detail description.
+DEALR starts from DEG analysis and take the statistics for differential LR-pair
+signaling analysis. The DEG statistics provides confidence for the inference
+of signaling changes. We provide wrapped-up pipeline to perform the DEG analysis
+that fit into DEALR inference, as well as visualization method to examine if 
+the differential signaling is true to intuition.
 
 This package can only be installed from github for now. Run the command below in R:
 
@@ -46,6 +54,8 @@ commonly seen container objects like `Seurat` and `liger`.
 For A Seurat or liger object:
 
 ```r
+library(dealr)
+
 degList <- pseudobulkDE(
     data = seurat_or_liger_Obj,
     condVar = 'treatment', condTest = 'treated', condCtrl = 'control', 
@@ -64,13 +74,7 @@ matrices pulled out from other forms of data structure.
 
 ### 2. Run DEALR inference
 
-1. Load the package
-
-```r
-library(dealr)
-```
-
-2. Load the ligand-receptor database. 
+1. Load the ligand-receptor database. 
 
 ```r
 data(db)
@@ -80,7 +84,7 @@ The object `db` is a list object with two elements `db$mouse` and `db$human`.
 They are identical to `CellChat::CellChatDB.mouse$interaction` and 
 `CellChat::CellChatDB.human$interaction`, respectively (copied from v2.2.0).
 
-3. Run LR-pair level inference
+2. Run LR-pair level inference
 
 ```r
 dealr_result <- dealr(degList, db$mouse)
@@ -93,18 +97,29 @@ Parameter `baseMeanThresh` can be adjusted to filter out lowly expressed genes
 to deny that they are expressed enough for forming LR interaction. This is 
 currently based on the `baseMean` field of DESeq2 result, which is the average 
 of the normalized counts across all samples. In our case, the average of the
-DESeq2-normalized pseudo-bulk counts from all samples involved in a test.
+DESeq2-normalized pseudo-bulk counts from all samples involved in a test. 
+
+Parameter `abslogfcThresh` can also be adjusted to filter out LR-pairs without
+largely differentially expressed components. 
 
 >This might be improved in the future introducing expression percentage obtained
 from single-cell data instead of just pseudo-bulk data.
 
-4. Proceed to pathway level inference
+3. Proceed to pathway level inference
 
 ```r
 dealr_pe_result <- pathwayEnrich(dealr_result)
 ```
 
 ### 3. Visualize the result
+
+To explore the result in a wider range, we provide `plotLRPairDot()` and 
+`plotPathwayEnrichDot()` to roughly show the top significant LR-pairs in a
+range of sender-receiver pairs. For a precise evidence at single-cell gene 
+expression level, we provide `plotLRGeneHeatmap()` to exactly show the 
+expression change of the LR-pair components.
+
+#### Broad exploration with dot plot of statistics
 
 - `plotLRPairDot(dealr_result)`: Dot plot of LR-pair significance between 
 possible sender-receiver pair. Larger dot size indicates more significant 
@@ -169,4 +184,43 @@ interests, but only between this cell type and other immune cells.
 immunes <- c('Mono', 'Mac', 'DC', 'B', 'T4', 'T8', 'NK') # ... as many as you have
 plotPathwayEnrichDot(dealr_pe_result, focus = 'Mac', sender_use = immunes, 
                      receiver_use = immunes)
+```
+
+#### Precise examination of gene expression between a certain pair of sender and receiver
+
+- `plotLRGeneHeatmap(data_obj, dealr_result, ...)`: This makes a heatmap of
+gene expression in the original single cells to show expression change of 
+components of an LR-pair between conditions and from sender to receiver. We put
+three panels of heatmaps together: one on the left for the sender cell type,
+combining cells from all samples and grouped by conditions, one on the right for
+the receiver cell type, also grouped by conditions, and one in the middle 
+showing the statistics of the LR-pairs. For the left or right pannel, each row 
+is a gene, and each column is a cell. Genes on the same row belong to the same 
+LR-pair. LR-pairs with complex components, e.g. A-(B+C), are expanded to 
+multiple rows, e.g. A-B and A-C. LR-pairs on the rows are further grouped by 
+pathways.
+
+For this function, users can only set one `sender_use` and one `receiver_use`. 
+Since this visualization method incorporates the original single-cell data, the 
+cell-level variables used for the psuedo-bulk DEG must be provided identically (
+i.e. use the same `splitVar`, `condVar`, `condTest` and `condCtrl` if you used
+the `pseudobulkDE()` pipeline, or otherwise equivalent if you constructed 
+`degList` yourself). 
+
+> Engineering of the software might be improved in the future to eliminate the 
+need that users have to make sure they use the identical input. 
+
+To show 1. the statistics of top significant LR-pairs between specific 
+sender-receiver pair of cell types; 2. the corresponding ligand gene expression 
+from the sender cell type, with contrast between conditions; 2. and the receptor 
+gene expression from the receiver cell type, also with contrast between 
+conditions, all at the same time:
+
+```r
+plotLRGeneHeatmap(
+    data = seurat_or_liger_Obj,
+    dealr = dealr_result,
+    splitVar = 'cell_type', sender_use = 'DC', receiver_use = 'T',
+    condVar = 'treatment', condTest = 'treated', condCtrl = 'control'
+)
 ```

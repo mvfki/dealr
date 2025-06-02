@@ -6,8 +6,10 @@
 #' condition and biological replicate variable, and then sum the counts to
 #' generate pseudo-bulk counts. The pseudo-bulk counts are then sent to DESeq2
 #' for differential expression analysis.
-#' @param data A matrix, a list of matrices, or a common container object where
-#' raw counts are available.
+#' @param data Full raw counts expression data of the single cells. Can be a
+#' single matrix or a list of matrices without merging, a commonly seen
+#' container object with raw counts at its conventional slot (e.g.
+#' LayerData(seurat, 'counts'), counts(sce), or rawData(liger)).
 #' @param condVar The condition variable that matches to all cells in the data.
 #' @param condTest The test condition within the condition variable.
 #' @param condCtrl The control condition within the condition variable.
@@ -226,9 +228,10 @@ pseudobulkDE.liger <- function(
         verbose = TRUE,
         ...
 ) {
-    if (!requireNamespace('rliger', quietly = TRUE)) {
+    if (!requireNamespace('rliger', quietly = TRUE) ||
+        utils::packageVersion('rliger') < package_version('2.0.0')) {
         cli_abort(c(
-            x = 'Package {.pkg rliger} is required for this function.',
+            x = 'Package {.pkg rliger >= 2.0.0} is required for this function.',
             i = 'Please install it with {.code install.packages("rliger")}'
         ))
     }
@@ -266,7 +269,8 @@ pseudobulkDE.liger <- function(
 #' @export
 #' @rdname pseudobulkDE
 #' @method pseudobulkDE Seurat
-#' @param assay Name of assay to fetch counts from. Default `RNA`.
+#' @param assay Name of assay to fetch counts from a Seurat object. Default
+#' `"RNA"`.
 pseudobulkDE.Seurat <- function(
         data,
         condVar,
@@ -279,9 +283,10 @@ pseudobulkDE.Seurat <- function(
         assay = 'RNA',
         ...
 ) {
-    if (!requireNamespace('SeuratObject', quietly = TRUE)) {
+    if (!requireNamespace('SeuratObject', quietly = TRUE) ||
+        utils::packageVersion('SeuratObject') < package_version('5.0.0')) {
         cli_abort(c(
-            x = 'Package {.pkg SeuratObject} is required for this function.',
+            x = 'Package {.pkg SeuratObject >= 5.0.0} is required for this function.',
             i = 'Please install it with {.code install.packages("Seurat")}'
         ))
     }

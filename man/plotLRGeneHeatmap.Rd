@@ -3,6 +3,8 @@
 \name{plotLRGeneHeatmap}
 \alias{plotLRGeneHeatmap}
 \alias{plotLRGeneHeatmap.default}
+\alias{plotLRGeneHeatmap.liger}
+\alias{plotLRGeneHeatmap.Seurat}
 \title{Gene expression heatmap of differential interacting LR-pair}
 \usage{
 plotLRGeneHeatmap(
@@ -58,12 +60,143 @@ plotLRGeneHeatmap(
   right_width = grid::unit(4, "cm"),
   ...
 )
+
+\method{plotLRGeneHeatmap}{liger}(
+  data,
+  dealr,
+  splitVar,
+  sender_use,
+  receiver_use,
+  condVar,
+  condTest,
+  condCtrl,
+  pval_thresh = 0.01,
+  abslogfc_thresh = 1,
+  top_n = NULL,
+  pathway_use = NULL,
+  splitVar_col = NULL,
+  condVar_col = NULL,
+  text_gene_size = 6,
+  text_pathway_size = 8,
+  text_condition_size = 10,
+  text_annotation_size = 8,
+  text_legend_size = 8,
+  text_legend_title_size = 10,
+  left_width = grid::unit(4, "cm"),
+  middle_width = grid::unit(1, "cm"),
+  right_width = grid::unit(4, "cm"),
+  ...
+)
+
+\method{plotLRGeneHeatmap}{Seurat}(
+  data,
+  dealr,
+  splitVar,
+  sender_use,
+  receiver_use,
+  condVar,
+  condTest,
+  condCtrl,
+  pval_thresh = 0.01,
+  abslogfc_thresh = 1,
+  top_n = NULL,
+  pathway_use = NULL,
+  splitVar_col = NULL,
+  condVar_col = NULL,
+  text_gene_size = 6,
+  text_pathway_size = 8,
+  text_condition_size = 10,
+  text_annotation_size = 8,
+  text_legend_size = 8,
+  text_legend_title_size = 10,
+  left_width = grid::unit(4, "cm"),
+  middle_width = grid::unit(1, "cm"),
+  right_width = grid::unit(4, "cm"),
+  assay = "RNA",
+  ...
+)
+}
+\arguments{
+\item{data}{Full raw counts expression data of the single cells. Can be a
+single matrix or a list of matrices without merging, a commonly seen
+container object with raw counts at its conventional slot (e.g.
+LayerData(seurat, 'counts'), counts(sce), or rawData(liger)).}
+
+\item{dealr}{A \code{dealr} object returned from the analysis using the same
+\code{data}.}
+
+\item{splitVar}{The cell identity grouping variable used at pseudo-bulk DEG
+detection.}
+
+\item{sender_use}{A single group of interest to be examined as the sender,
+must be available in \code{splitVar}.}
+
+\item{receiver_use}{A single group of interest to be examined as the
+receiver, must be available in \code{splitVar}.}
+
+\item{condVar}{The condition variable used at pseudo-bulk DEG detection.}
+
+\item{condTest}{The condition used as the test condition.}
+
+\item{condCtrl}{The condition used as the control condition.}
+
+\item{pval_thresh}{Numeric, the p-value threshold. LR-pairs with p-value
+greater than this threshold will be ignored. Default is \code{0.01}.}
+
+\item{abslogfc_thresh}{Numeric, the threshold on the absolute value of
+combined logFC. LR-pairs with absolute value of combined logFC less than this
+threshold will be ignored. Default is \code{1}.}
+
+\item{top_n}{Integer, the number of top LR-pairs to be plotted, ranked by
+p-value. Default \code{NULL} means all LR-pairs passing the thresholds.}
+
+\item{pathway_use}{Character vector of pathways. This allows users to show
+only LR-pairs from specific pathways. Default \code{NULL} means all pathways
+having significant differentially interacting LR-pairs.}
+
+\item{splitVar_col}{Named character vector of colors for classes in
+\code{splitVar}. Default \code{NULL} uses a default color palette.}
+
+\item{condVar_col}{Named character vector of colors for conditions in
+\code{condVar}. Default \code{NULL} uses a default color palette.}
+
+\item{text_gene_size}{Numeric, size of the gene names at the left and right
+of the heatmap. Default \code{6}.}
+
+\item{text_pathway_size}{Numeric, size of the pathway names at the left of
+the heatmap. Default \code{8}.}
+
+\item{text_condition_size}{Numeric, size of the condition names at the top of
+the heatmap. Default \code{10}.}
+
+\item{text_annotation_size}{Numeric, size of the annotation names by the side
+of the annotation bars of the heatmap. Default \code{8}.}
+
+\item{text_legend_size}{Numeric, size of the text in the legend. Default \code{8}.}
+
+\item{text_legend_title_size}{Numeric, size of the legend title. Default
+\code{10}.}
+
+\item{left_width}{A unit object indicating the width of the left panel for
+the sender group. Default \code{grid::unit(4, "cm")}.}
+
+\item{middle_width}{A unit object indicating the width of the middle panel
+for LR-pair statistics. Default \code{grid::unit(1, "cm")}.}
+
+\item{right_width}{A unit object indicating the width of the right panel for
+the receiver group. Default \code{grid::unit(4, "cm")}.}
+
+\item{...}{Method specific arguments.}
+
+\item{assay}{Name of assay to fetch counts from a Seurat object. Default
+\code{"RNA"}.}
 }
 \description{
-It creates heatmap focusing on a specific pair of sender and receiver cell
-groups. The heatmap is further divided to show the contrast of between the
-conditions where the input DEGs were derived. The columns of the heatmap
-represent cells and each row is a gene. Rows are grouped by LR-pairs in the
-situation when complex components are involved, and are further grouped by
-pathways.
+This function creates a combined heatmap focusing on a specific pair of
+sender and receiver cell groups. The heatmap is divided to show the contrast
+between the conditions where the input DEGs were derived. The columns of the
+heatmap represent single cells and each row is a gene pair. In the situation
+of an LR-pair with complex components, e.g. A-(BC), we expand it to multiple
+rows of A-B and A-C to maintain the grouping. Rows are further grouped by
+pathways as annotated by the database used at DEALR analysis.
 }

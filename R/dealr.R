@@ -62,9 +62,12 @@
 #' @param baseMeanThresh Numeric, threshold on the mean DESeq2-normalized
 #' expression. Lower expression will be considered as not having sufficient
 #' expression to be a ligand or receptor. Default `100`.
-#' @param baseMean_field,stat_field,padj_field Column names to fetch necessary
-#' statistics from each DE dataframe in `degList`. Default
-#' `'baseMean'`, `'stat'`, and `'padj'`, respectively.
+#' @param abslogfcThresh Numeric, threshold on the absolute value of log2 fold
+#' change. Only LR-pairs with at least one ligand or receptor having large
+#' enough log2 fold change will be considered. Default `1`.
+#' @param baseMean_field,logfc_field,stat_field,padj_field Column names to fetch
+#' necessary statistics from each DE dataframe in `degList`. Default
+#' `'baseMean'`, `'log2FoldChange'`, `'stat'`, and `'padj'`, respectively.
 #' @param pathway_name_field,ligand_symbol_field,receptor_symbol_field Column
 #' names to fetch necessary annotation from the LR-pair database `db`.
 #' Default `'pathway_name'`, `'ligand.symbol'`, and

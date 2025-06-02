@@ -55,8 +55,10 @@ pseudobulkDE(
 )
 }
 \arguments{
-\item{data}{A matrix, a list of matrices, or a common container object where
-raw counts are available.}
+\item{data}{Full raw counts expression data of the single cells. Can be a
+single matrix or a list of matrices without merging, a commonly seen
+container object with raw counts at its conventional slot (e.g.
+LayerData(seurat, 'counts'), counts(sce), or rawData(liger)).}
 
 \item{condVar}{The condition variable that matches to all cells in the data.}
 
@@ -79,7 +81,8 @@ of just the result statistics. Default \code{FALSE}.}
 \item{verbose}{Logical, whether to print some useful information. Default
 \code{TRUE}}
 
-\item{assay}{Name of assay to fetch counts from. Default \code{RNA}.}
+\item{assay}{Name of assay to fetch counts from a Seurat object. Default
+\code{"RNA"}.}
 }
 \value{
 A list of DESeq2 result objects, one for each identity class.

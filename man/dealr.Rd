@@ -35,9 +35,13 @@ separator (e.g. 'Tgfbr1, Tgfbr2').}
 expression. Lower expression will be considered as not having sufficient
 expression to be a ligand or receptor. Default \code{100}.}
 
-\item{baseMean_field, stat_field, padj_field}{Column names to fetch necessary
-statistics from each DE dataframe in \code{degList}. Default
-\code{'baseMean'}, \code{'stat'}, and \code{'padj'}, respectively.}
+\item{abslogfcThresh}{Numeric, threshold on the absolute value of log2 fold
+change. Only LR-pairs with at least one ligand or receptor having large
+enough log2 fold change will be considered. Default \code{1}.}
+
+\item{baseMean_field, logfc_field, stat_field, padj_field}{Column names to fetch
+necessary statistics from each DE dataframe in \code{degList}. Default
+\code{'baseMean'}, \code{'log2FoldChange'}, \code{'stat'}, and \code{'padj'}, respectively.}
 
 \item{pathway_name_field, ligand_symbol_field, receptor_symbol_field}{Column
 names to fetch necessary annotation from the LR-pair database \code{db}.

@@ -5,7 +5,7 @@
 \alias{dealr-package}
 \title{dealr: Differentially Expression Aware Ligand-Receptor Inference}
 \description{
-More about what it does (maybe more than one line).
+Inference differential ligand-receptor signaling based on differential gene expression statistics.
 }
 \author{
 \strong{Maintainer}: Yichen Wang \email{wayichen@umich.edu}
