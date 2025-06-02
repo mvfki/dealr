@@ -1,4 +1,4 @@
-# dealr: Differentially Expression Aware Ligand-Receptor Inference
+# dealr: Differential Expression Aware Ligand-Receptor Inference
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
